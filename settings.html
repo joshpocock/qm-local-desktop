@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline';" />
+<title>QM Local — Settings</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: #101216;
+    color: #e7e7ea;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    padding: 24px;
+  }
+  h1 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 16px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    color: #a5a5ad;
+    margin-bottom: 6px;
+  }
+  input[type="text"] {
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    border: 1px solid #2e323a;
+    background: #1c1e24;
+    color: #e7e7ea;
+    outline: none;
+  }
+  input[type="text"]:focus {
+    border-color: #d4a017;
+  }
+  .error {
+    color: #e2555f;
+    font-size: 12px;
+    margin-top: 8px;
+    min-height: 14px;
+  }
+  .actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #2e323a;
+    background: #1c1e24;
+    color: #e7e7ea;
+    cursor: pointer;
+  }
+  button.primary {
+    background: #d4a017;
+    border-color: #d4a017;
+    color: #101216;
+  }
+</style>
+</head>
+<body>
+  <h1>QM Local UI Address</h1>
+  <label for="url-input">URL of the qm-local web UI</label>
+  <input type="text" id="url-input" placeholder="http://localhost:8192" autofocus />
+  <div class="error" id="error"></div>
+  <div class="actions">
+    <button id="cancel-btn">Cancel</button>
+    <button class="primary" id="save-btn">Save</button>
+  </div>
+  <script>
+    (async function () {
+      var input = document.getElementById('url-input');
+      var errorEl = document.getElementById('error');
+
+      if (window.qmLocal && window.qmLocal.getConfig) {
+        var cfg = await window.qmLocal.getConfig();
+        if (cfg && cfg.url) input.value = cfg.url;
+      }
+
+      document.getElementById('save-btn').addEventListener('click', async function () {
+        errorEl.textContent = '';
+        if (!window.qmLocal || !window.qmLocal.setConfig) return;
+        var result = await window.qmLocal.setConfig(input.value);
+        if (!result || !result.ok) {
+          errorEl.textContent = (result && result.error) || 'Could not save settings.';
+        }
+      });
+
+      document.getElementById('cancel-btn').addEventListener('click', function () {
+        window.close();
+      });
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') document.getElementById('save-btn').click();
+        if (e.key === 'Escape') window.close();
+      });
+    })();
+  </script>
+</body>
+</html>

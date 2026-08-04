@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline';" />
+<title>QM Local — Offline</title>
+<style>
+  :root {
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #101216;
+    color: #e7e7ea;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .card {
+    max-width: 460px;
+    text-align: center;
+    padding: 40px;
+  }
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #d4a017;
+    display: inline-block;
+    margin-bottom: 20px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.15); }
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #a5a5ad;
+    margin: 0 0 8px;
+  }
+  code {
+    background: #1c1e24;
+    border: 1px solid #2e323a;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 13px;
+    color: #e7e7ea;
+  }
+  .url {
+    font-size: 12px;
+    color: #6b6b73;
+    margin-top: 4px;
+    word-break: break-all;
+  }
+  .actions {
+    margin-top: 24px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 6px;
+    border: 1px solid #2e323a;
+    background: #1c1e24;
+    color: #e7e7ea;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #24272e;
+  }
+  button.primary {
+    background: #d4a017;
+    border-color: #d4a017;
+    color: #101216;
+  }
+  button.primary:hover {
+    background: #e0ac1f;
+  }
+  .status {
+    margin-top: 14px;
+    font-size: 12px;
+    color: #6b6b73;
+    min-height: 16px;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="dot"></div>
+    <h1>QM stack is not running</h1>
+    <p>Start it with <code>qm up</code>, then press Retry.</p>
+    <p class="url" id="target-url"></p>
+    <div class="actions">
+      <button class="primary" id="retry-btn">Retry now</button>
+      <button id="settings-btn">Settings</button>
+    </div>
+    <div class="status" id="status">Checking automatically every 5 seconds&hellip;</div>
+  </div>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var url = params.get('url');
+      if (url) {
+        document.getElementById('target-url').textContent = url;
+      }
+
+      document.getElementById('retry-btn').addEventListener('click', function () {
+        var statusEl = document.getElementById('status');
+        statusEl.textContent = 'Retrying…';
+        if (window.qmLocal && window.qmLocal.retry) {
+          window.qmLocal.retry();
+        }
+      });
+
+      document.getElementById('settings-btn').addEventListener('click', function () {
+        if (window.qmLocal && window.qmLocal.openSettings) {
+          window.qmLocal.openSettings();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

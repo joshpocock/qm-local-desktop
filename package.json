@@ -1,0 +1,45 @@
+{
+  "name": "qm-local-desktop",
+  "version": "1.0.0",
+  "description": "Unofficial desktop shell for the qm-local web UI",
+  "main": "main.js",
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "icon": "node scripts/make-icon.js"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.stride.qmlocaldesktop",
+    "productName": "QM Local",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "offline.html",
+      "settings.html",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "portable": {
+      "artifactName": "QM-Local-Desktop-${version}-portable.exe"
+    }
+  }
+}
