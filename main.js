@@ -13,7 +13,7 @@ const path = require('path');
 const fs = require('fs');
 
 const APP_NAME = 'QM Local';
-const DEFAULT_URL = 'http://localhost:8191';
+const DEFAULT_URL = 'http://localhost:8291';
 const POLL_INTERVAL_MS = 5000;
 const CONNECT_TIMEOUT_MS = 3000;
 
