@@ -13,7 +13,7 @@ this app.
 ## What it does
 
 - Opens a window pointed at your local `qm-local` web UI (default
-  `http://localhost:8191`, the portal, which is the sign-in front door).
+  `http://localhost:8291`, the portal, which is the sign-in front door).
 - If the stack isn't running, shows a friendly offline screen with a Retry
   button, and polls every 5 seconds so the window loads automatically as
   soon as the server comes up.
@@ -55,7 +55,7 @@ Example:
 
 ```json
 {
-  "url": "http://localhost:8191"
+  "url": "http://localhost:8291"
 }
 ```
 
