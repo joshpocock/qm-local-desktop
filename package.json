@@ -11,6 +11,9 @@
     "dist": "electron-builder",
     "icon": "node scripts/make-icon.js"
   },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
   "devDependencies": {
     "electron": "^33.0.0",
     "electron-builder": "^25.1.8"
@@ -32,14 +35,29 @@
     "win": {
       "target": [
         {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
           "target": "portable",
           "arch": ["x64"]
         }
       ],
       "icon": "assets/icon.png"
     },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "QM-Local-Desktop-Setup-${version}.exe"
+    },
     "portable": {
       "artifactName": "QM-Local-Desktop-${version}-portable.exe"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "joshpocock",
+      "repo": "qm-local-desktop"
     }
   }
 }
