@@ -8,7 +8,9 @@ const {
   shell,
   ipcMain,
   nativeImage,
+  dialog,
 } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 
@@ -16,6 +18,7 @@ const APP_NAME = 'QM Local';
 const DEFAULT_URL = 'http://localhost:8291';
 const POLL_INTERVAL_MS = 5000;
 const CONNECT_TIMEOUT_MS = 3000;
+const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 const configDir = path.join(app.getPath('appData'), 'qm-local-desktop');
 const configPath = path.join(configDir, 'config.json');
@@ -27,6 +30,7 @@ let mainWindow = null;
 let settingsWindow = null;
 let tray = null;
 let pollTimer = null;
+let updateCheckTimer = null;
 let isQuitting = false;
 
 // ---------------------------------------------------------------------
@@ -334,6 +338,8 @@ function createAppMenu() {
           click: () => loadTargetUrl(),
         },
         { type: 'separator' },
+        { label: 'Check for updates...', click: () => checkForUpdatesManually() },
+        { type: 'separator' },
         {
           label: 'Quit',
           click: () => {
@@ -358,6 +364,109 @@ function createAppMenu() {
 }
 
 // ---------------------------------------------------------------------
+// Auto-update
+// ---------------------------------------------------------------------
+//
+// Ships only in the NSIS-installed build — electron-updater has no
+// auto-install mechanism for the portable target (no installed location
+// to update in place), so the portable .exe just stays on whatever
+// version it was downloaded as. Checks are silent and non-fatal by
+// design: this app's whole job is to display a web page, and a failed
+// update check must never interfere with that.
+
+function checkForUpdates() {
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('[updater] checkForUpdates failed:', err && err.message ? err.message : err);
+  });
+}
+
+function stopUpdateChecks() {
+  if (updateCheckTimer) {
+    clearInterval(updateCheckTimer);
+    updateCheckTimer = null;
+  }
+}
+
+function promptRestartToUpdate(info) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  dialog
+    .showMessageBox(mainWindow, {
+      type: 'info',
+      buttons: ['Restart now', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+      title: `${APP_NAME} update ready`,
+      message: `A new version (${info.version}) has been downloaded.`,
+      detail:
+        'Restart now to install it, or keep working — it installs automatically the next time you quit.',
+    })
+    .then((result) => {
+      if (result.response === 0) {
+        isQuitting = true;
+        autoUpdater.quitAndInstall();
+      }
+    })
+    .catch((err) => {
+      console.error('[updater] Failed to show update-ready dialog:', err);
+    });
+}
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) {
+    // No feed metadata in a dev run — electron-updater would just throw
+    // looking for app-update.yml. Nothing to check.
+    console.log('[updater] Skipping update checks — not a packaged build.');
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    console.log(`[updater] Update available: ${info.version}`);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    console.log(`[updater] Downloading update: ${Math.round(progress.percent)}%`);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log(`[updater] Update downloaded: ${info.version}`);
+    promptRestartToUpdate(info);
+  });
+
+  autoUpdater.on('error', (err) => {
+    // Log and move on — never a crash, never a modal error storm.
+    console.error('[updater] Update check failed:', err && err.message ? err.message : err);
+  });
+
+  checkForUpdates();
+  stopUpdateChecks();
+  updateCheckTimer = setInterval(checkForUpdates, UPDATE_CHECK_INTERVAL_MS);
+}
+
+function checkForUpdatesManually() {
+  if (!app.isPackaged) {
+    dialog.showMessageBox(mainWindow || undefined, {
+      type: 'info',
+      title: `${APP_NAME} update check`,
+      message: 'Update checks are only available in packaged builds.',
+    });
+    return;
+  }
+
+  autoUpdater.once('update-not-available', () => {
+    dialog.showMessageBox(mainWindow || undefined, {
+      type: 'info',
+      title: `${APP_NAME} update check`,
+      message: `You're up to date (v${app.getVersion()}).`,
+    });
+  });
+
+  checkForUpdates();
+}
+
+// ---------------------------------------------------------------------
 // App lifecycle
 // ---------------------------------------------------------------------
 
@@ -376,6 +485,7 @@ if (!gotLock) {
     createAppMenu();
     createMainWindow();
     createTray();
+    setupAutoUpdater();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -394,5 +504,6 @@ if (!gotLock) {
   app.on('before-quit', () => {
     isQuitting = true;
     stopPolling();
+    stopUpdateChecks();
   });
 }
