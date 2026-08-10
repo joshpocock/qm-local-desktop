@@ -11,6 +11,7 @@ const {
   dialog,
 } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const { clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -29,6 +30,7 @@ const preloadPath = path.join(__dirname, 'preload.js');
 let mainWindow = null;
 let settingsWindow = null;
 let tray = null;
+let hideNoticeShown = false;
 let pollTimer = null;
 let updateCheckTimer = null;
 let isQuitting = false;
@@ -170,6 +172,15 @@ function createMainWindow() {
     if (!isQuitting) {
       event.preventDefault();
       mainWindow.hide();
+      // Closing hides to the tray rather than quitting; without saying so once, the app
+      // just seems to vanish and people go hunting for a shortcut that may not exist.
+      if (!hideNoticeShown && tray) {
+        hideNoticeShown = true;
+        tray.displayBalloon({
+          title: APP_NAME,
+          content: 'Still running in the tray. Click the tray icon to reopen, or right-click it to quit.',
+        });
+      }
     }
   });
 
@@ -253,12 +264,53 @@ ipcMain.on('qm:open-settings', () => {
 });
 
 // ---------------------------------------------------------------------
+// Sign-in completion
+// ---------------------------------------------------------------------
+//
+// QM's browser sign-in is a single-use link that arrives OUTSIDE this app (the auth
+// service log, or an email). Opening it in the system browser signs the BROWSER in --
+// a different cookie jar -- and consumes the link, so the app's own pending sign-in
+// then fails with "login session expired". The only session that can complete this
+// app's sign-in is this app's. So: copy the link, then use this to load it here.
+function completeSignInFromClipboard() {
+  const raw = (clipboard.readText() || '').trim();
+  let parsed = null;
+  try {
+    parsed = new URL(raw);
+  } catch (err) {
+    parsed = null;
+  }
+  const configured = new URL(currentConfig.url);
+  const ok =
+    parsed &&
+    parsed.origin === configured.origin &&
+    (parsed.pathname.startsWith('/idp/verify') || parsed.pathname.startsWith('/auth/'));
+  if (!ok) {
+    dialog.showErrorBox(
+      'No sign-in link in clipboard',
+      'Copy the full QM sign-in link first (it looks like ' +
+        configured.origin +
+        '/idp/verify#token=...), then choose this again. Links are single-use and expire in about 15 minutes -- if one was already opened in a browser, request a fresh one from the sign-in screen here.'
+    );
+    return;
+  }
+  if (!mainWindow) createMainWindow();
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.loadURL(parsed.toString());
+}
+
+// ---------------------------------------------------------------------
 // Tray
 // ---------------------------------------------------------------------
 
 function buildTrayMenu() {
   const loginSettings = app.getLoginItemSettings();
   return Menu.buildFromTemplate([
+    {
+      label: 'Complete sign-in from copied link',
+      click: () => completeSignInFromClipboard(),
+    },
     {
       label: 'Open QM Local',
       click: () => {
@@ -331,6 +383,7 @@ function createAppMenu() {
     {
       label: 'File',
       submenu: [
+        { label: 'Complete sign-in from copied link', click: () => completeSignInFromClipboard() },
         { label: 'Settings...', click: () => openSettingsWindow() },
         {
           label: 'Reload',

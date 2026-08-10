@@ -1,6 +1,6 @@
 {
   "name": "qm-local-desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Unofficial desktop shell for the qm-local web UI",
   "main": "main.js",
   "author": "",
@@ -36,11 +36,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.png"
